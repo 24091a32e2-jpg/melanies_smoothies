@@ -1,6 +1,8 @@
 # Import python packages
 import streamlit as st
 from snowflake.snowpark.functions import col
+import requests
+import pandas as pd
 
 # Title
 st.title(":cup_with_straw: Customize Your Smoothie! :cup_with_straw:")
@@ -16,7 +18,6 @@ session = cnx.session()
 
 # Load fruit options
 my_dataframe = session.table("smoothies.public.fruit_options")
-
 st.dataframe(data=my_dataframe, use_container_width=True)
 
 # Convert Snowpark column to list
@@ -30,11 +31,25 @@ ingredients_list = st.multiselect(
 )
 
 if ingredients_list:
+
     st.write(ingredients_list)
 
-    ingredients_string = ", ".join(ingredients_list)
-    st.write(ingredients_string)
+    ingredients_string = ""
 
+    for fruit_chosen in ingredients_list:
+
+        ingredients_string += fruit_chosen + " "
+
+        # API request (same as screenshot)
+        smoothiefroot_response = requests.get(
+            "https://my.smoothiefroot.com/api/fruit/watermelon"
+        )
+
+        sf_df = pd.json_normalize(smoothiefroot_response.json())
+
+        st.dataframe(data=sf_df, use_container_width=True)
+
+    # Insert order into Snowflake
     my_insert_stmt = f"""
     INSERT INTO smoothies.public.orders (ingredients, name_on_order)
     VALUES ('{ingredients_string}', '{name_on_order}')
@@ -47,36 +62,3 @@ if ingredients_list:
     if time_to_insert:
         session.sql(my_insert_stmt).collect()
         st.success(f"Your Smoothie is ordered, {name_on_order}! ✅")
-
-import requests
-import pandas as pd
-import streamlit as st
-
-# Fetch data from API
-response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
-fruit = response.json()
-
-# Create a list of dicts, one for each nutrition item
-nutrition_rows = []
-for nutrient, value in fruit['nutrition'].items():
-    nutrition_rows.append({
-        'nutrition': nutrient,
-        'family': fruit['family'],
-        'genus': fruit['genus'],
-        'id': fruit['id'],
-        'name': fruit['name'],
-        'order': fruit['order'],
-        'value': value
-    })
-
-# Convert list of dicts to DataFrame
-df = pd.DataFrame(nutrition_rows)
-
-# Rename the column 'value' to show in the table clearly
-df = df.rename(columns={'value': 'amount'})
-
-# Reorder columns to match your screenshot
-df = df[['nutrition', 'family', 'genus', 'id', 'name', 'amount', 'order']]
-
-# Display the DataFrame in Streamlit
-st.dataframe(df, use_container_width=True)
