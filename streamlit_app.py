@@ -2,7 +2,6 @@
 import streamlit as st
 from snowflake.snowpark.functions import col
 import requests
-import pandas as pd
 
 # Title
 st.title(":cup_with_straw: Customize Your Smoothie! :cup_with_straw:")
@@ -18,6 +17,7 @@ session = cnx.session()
 
 # Load fruit options
 my_dataframe = session.table("smoothies.public.fruit_options")
+
 st.dataframe(data=my_dataframe, use_container_width=True)
 
 # Convert Snowpark column to list
@@ -30,6 +30,7 @@ ingredients_list = st.multiselect(
     max_selections=5
 )
 
+# When fruits are selected
 if ingredients_list:
 
     st.write(ingredients_list)
@@ -40,16 +41,17 @@ if ingredients_list:
 
         ingredients_string += fruit_chosen + " "
 
-        # API request (same as screenshot)
         smoothiefroot_response = requests.get(
             "https://my.smoothiefroot.com/api/fruit/watermelon"
         )
 
-        sf_df = pd.json_normalize(smoothiefroot_response.json())
+        sf_df = st.dataframe(
+            data=smoothiefroot_response.json(),
+            use_container_width=True
+        )
 
-        st.dataframe(data=sf_df, use_container_width=True)
+    st.write(ingredients_string)
 
-    # Insert order into Snowflake
     my_insert_stmt = f"""
     INSERT INTO smoothies.public.orders (ingredients, name_on_order)
     VALUES ('{ingredients_string}', '{name_on_order}')
@@ -61,4 +63,4 @@ if ingredients_list:
 
     if time_to_insert:
         session.sql(my_insert_stmt).collect()
-        st.success(f"Your Smoothie is ordered, {name_on_order}! ✅")
+        st.success(f"Your Smoothie is ordered, {name_on_order}!")
