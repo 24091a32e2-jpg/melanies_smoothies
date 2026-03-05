@@ -48,22 +48,35 @@ if ingredients_list:
         session.sql(my_insert_stmt).collect()
         st.success(f"Your Smoothie is ordered, {name_on_order}! ✅")
 
-import streamlit as st
 import requests
+import pandas as pd
+import streamlit as st
 
-smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
-fruit_data = smoothiefroot_response.json()
+# Fetch data from API
+response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
+fruit = response.json()
 
-flat_data = {
-    'family': fruit_data['family'],
-    'genus': fruit_data['genus'],
-    'id': fruit_data['id'],
-    'name': fruit_data['name'],
-    'carbs': fruit_data['nutrition']['carbs'],
-    'fat': fruit_data['nutrition']['fat'],
-    'protein': fruit_data['nutrition']['protein'],
-    'sugar': fruit_data['nutrition']['sugar'],
-    'order': fruit_data['order']
-}
+# Create a list of dicts, one for each nutrition item
+nutrition_rows = []
+for nutrient, value in fruit['nutrition'].items():
+    nutrition_rows.append({
+        'nutrition': nutrient,
+        'family': fruit['family'],
+        'genus': fruit['genus'],
+        'id': fruit['id'],
+        'name': fruit['name'],
+        'order': fruit['order'],
+        'value': value
+    })
 
-st.dataframe(data=[flat_data], use_container_width=True)
+# Convert list of dicts to DataFrame
+df = pd.DataFrame(nutrition_rows)
+
+# Rename the column 'value' to show in the table clearly
+df = df.rename(columns={'value': 'amount'})
+
+# Reorder columns to match your screenshot
+df = df[['nutrition', 'family', 'genus', 'id', 'name', 'amount', 'order']]
+
+# Display the DataFrame in Streamlit
+st.dataframe(df, use_container_width=True)
