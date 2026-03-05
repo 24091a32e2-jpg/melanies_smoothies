@@ -48,8 +48,22 @@ if ingredients_list:
         session.sql(my_insert_stmt).collect()
         st.success(f"Your Smoothie is ordered, {name_on_order}! ✅")
 
+import streamlit as st
 import requests
 
 smoothiefroot_response = requests.get("https://my.smoothiefroot.com/api/fruit/watermelon")
-st.text(smoothiefroot_response.json())
-sf_df = st.dataframe(data=[flat_data], use_container_width=True)
+fruit_data = smoothiefroot_response.json()
+
+flat_data = {
+    'family': fruit_data['family'],
+    'genus': fruit_data['genus'],
+    'id': fruit_data['id'],
+    'name': fruit_data['name'],
+    'carbs': fruit_data['nutrition']['carbs'],
+    'fat': fruit_data['nutrition']['fat'],
+    'protein': fruit_data['nutrition']['protein'],
+    'sugar': fruit_data['nutrition']['sugar'],
+    'order': fruit_data['order']
+}
+
+st.dataframe(data=[flat_data], use_container_width=True)
